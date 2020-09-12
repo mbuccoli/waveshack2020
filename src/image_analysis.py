@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import filedialog
 from matplotlib import pyplot as plt
 from scipy import stats
-
+from sklearn.cluster import DBSCAN
 # %%
 
 class Image_Analysis:
@@ -45,7 +45,15 @@ class Image_Analysis:
         edges = cv2.Canny(self.imgray,50,150,apertureSize = 3)
         lines = cv2.HoughLines(edges,1,np.pi/180,200)
         return lines
-
+    
+    def get_main_colors(self):
+        pixels = self.im.reshape((-1,3))
+        pixels = np.float32(pixels)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+        k = 3
+        _, labels, (centers) = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+        centers = np.uint8(centers)
+        return centers
 
 # %%
 if __name__=="__main__":    
@@ -60,6 +68,7 @@ if __name__=="__main__":
     lines=Ia.get_lines()
     imcontours = cv2.drawContours(Ia.im, contours, -1, (0,255,0), 3)
     Ia.show(imcontours)
-        
+    centres = Ia.get_main_colors()
+    print(centres)
 
 # %%
