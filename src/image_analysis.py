@@ -7,6 +7,7 @@ from tkinter import filedialog
 from matplotlib import pyplot as plt
 from scipy import stats
 from sklearn.cluster import DBSCAN
+
 # %%
 
 class Image_Analysis:
@@ -66,9 +67,13 @@ if __name__=="__main__":
     print(means, stddevs)
     contours,_=Ia.get_contours()
     lines=Ia.get_lines()
-    imcontours = cv2.drawContours(Ia.im, contours, -1, (0,255,0), 3)
+    imcontours = cv2.drawContours(Ia.im.copy(), contours, -1, (0,255,0), 3)
     Ia.show(imcontours)
     centres = Ia.get_main_colors()
     print(centres)
-
+    plt.figure()
+    for i, c in enumerate(centres):
+        color=np.array(c)[::-1]/255.
+        plt.scatter(i, i, s=500, color=color)
+    plt.show()
 # %%
