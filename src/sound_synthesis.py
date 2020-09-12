@@ -28,15 +28,27 @@ class Audio_Synthesis():
             func=feature["func"]
             func(**feature["kwargs"])
     def create_env(self, type_env="cos", ampl_min=0, ampl_max=1, freq=0, 
-                         dur_events=0.5, onset_events = []):
+                         dur_onset=0.5, onsets = []):
         if type_env=="cos":
             env=np.cos(2*np.pi*freq*np.arange(self.dur_samples)/self.sr)
             env=np.interp(env, (-1,1), (ampl_min, ampl_max))
-        elif type_env=="events":
-            event=np.sin(np.linspace(0, np.pi, int(dur_events*self.sr)))
-            half_dur=int(dur_events/2*self.sr)
+        elif type_env=="square" or type_env=="saw":
+            event=np.zeros(int(self.sr/freq))
+            if type_env=="square":                
+                sq4=int(event.size/4)
+                event[sq4:3*sq4]=1            
+            elif type_env =="saw":
+                event=np.linspace(1,0, event.size)
+            
+            env = np.tile(event, (int(np.ceil(self.dur_samples/event.size)),))
+            env = env[:self.dur_samples]
+            env = np.interp(env, (0,1), (ampl_min, ampl_max))
+
+        elif type_env=="onset":
+            event=np.sin(np.linspace(0, np.pi, int(dur_onset*self.sr)))
+            half_dur=int(dur_onset/2*self.sr)
             env=np.zeros((self.dur_samples))
-            for ev in onset_events:
+            for ev in onsets:
                 i=int(ev*self.sr)
                 i_l = max(0, i-half_dur)
                 i_r= min(i+half_dur, self.dur_samples-1)
@@ -76,6 +88,8 @@ class Audio_Synthesis():
         a=self.fix_poles(a)
         return lfilter(b,a,x)
     def apply_envelope(self, x, env):
+        if env is None:
+            return x
         return x*env        
     def apply_noise(self, ampl=1, fc_high=None, fc_low=None, env=None):        
         noise = np.random.randn((self.dur_samples))
@@ -87,8 +101,7 @@ class Audio_Synthesis():
             noise=self.high_pass(noise, fc_low)
         elif fc_high is not None:
             noise=self.low_pass(noise, fc_high)
-        if env is not None:
-            noise=self.apply_envelope(noise, env)
+        noise=self.apply_envelope(noise, env)
         
         self.signal+=noise
     def add_noise(self, ampl=1, fc_high=None, fc_low=None, env=None):        
@@ -96,6 +109,29 @@ class Audio_Synthesis():
                               "kwargs":{"ampl":ampl, "fc_high":fc_high, 
                                         "fc_low":fc_low, "env":env}
                             })
+    def __add_(self, what, **kwargs):
+        self.features.append({"func":what, "kwargs":kwargs})
+    def apply_saw(self, ampl=1,freq=0, env=None):
+        saw = self.create_env(type_env="saw", ampl_min=-1, ampl_max=1, freq=freq)
+        saw=self.apply_envelope(saw, env)        
+        self.signal+=saw
+    def apply_tone(self, ampl=1,freq=0, env=None):
+        tone = self.create_env(type_env="cos", ampl_min=-1, ampl_max=1, freq=freq)
+        tone=self.apply_envelope(tone, env)        
+        self.signal+=tone
+    
+    def apply_square(self, ampl=1,freq=0, env=None):
+        square = self.create_env(type_env="square", ampl_min=-1, ampl_max=1, freq=freq)
+        square = self.apply_envelope(square, env)        
+        self.signal+=square
+
+    def add_square(self, ampl=1, freq=0, env=None):        
+        self.__add_(self.apply_square, ampl=ampl, freq=freq, env=env)
+    def add_tone(self, ampl=1, freq=0, env=None):        
+        self.__add_(self.apply_tone, ampl=ampl, freq=freq, env=env)
+    def add_saw(self, ampl=1, freq=0, env=None):        
+        self.__add_(self.apply_saw, ampl=ampl, freq=freq, env=env)
+    
         
     def normalize(self):
         if np.all(self.signal==0):
@@ -136,7 +172,7 @@ if __name__=="__main__":
 
     as4=Audio_Synthesis(30, 16000)
     onset_events=np.random.rand(np.random.randint(5,15))*30
-    env4 = as4.create_env(type_env="events", onset_events=onset_events)
+    env4 = as4.create_env(type_env="onset", onsets=onset_events)
     as4.add_noise(fc_high=500, fc_low=400, env=env4)
     as4.generate()
     as4.write("../audio_test/test4.wav")
@@ -158,13 +194,24 @@ if __name__=="__main__":
         else:
             freq_right=LOW_BAND
             freq_left=None
-        print(freq_left, freq_right)
         as5.add_noise(fc_high=freq_right, fc_low=freq_left, env=env.copy())
 
     as5.generate()
     as5.write("../audio_test/test5.wav")
 
 
+    as6=Audio_Synthesis(30, 16000)
+    freqs_notes=[220.00, 233.08, 246.94, 261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88, 523.25, 554.37, 587.33, 622.25, 659.25, 698.46, 739.99, 783.99, 830.61, 880.00, 932.33, 987.77, 1046.50]
+
+    for _ in range(5): # type of notes
+        onset_events=np.random.rand(np.random.randint(5,15))*30
+        env6 = as6.create_env(type_env="onset", onsets=onset_events, 
+                              dur_onset = .1+np.random.rand()*.4)
+
+        as6.add_saw(freq=freqs_notes[np.random.randint(len(freqs_notes))] , 
+                     ampl=np.random.rand()*.8+.1, env=env6.copy())
+    as6.generate()
+    as6.write("../audio_test/test6.wav")
 
 
 # %%
