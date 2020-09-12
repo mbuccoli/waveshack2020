@@ -9,6 +9,11 @@ os.chdir(os.path.abspath(os.path.dirname(__file__)))
 
 # %%
 
+def map_(x, range_in, range_out):
+    y=x-range_in[0]
+    y/=(range_in[1]-range_in[0])
+    y*=(range_out[1]-range_out[0])
+    return y+range_out[0]
 class Audio_Synthesis():
     def __init__(self, duration_seconds=30, samplerate=16000):
         assert duration_seconds>0, "negative duration!"
@@ -31,7 +36,7 @@ class Audio_Synthesis():
                          dur_onset=0.5, onsets = []):
         if type_env=="cos":
             env=np.cos(2*np.pi*freq*np.arange(self.dur_samples)/self.sr)
-            env=np.interp(env, (-1,1), (ampl_min, ampl_max))
+            env=map_(env, (-1,1), (ampl_min, ampl_max))
         elif type_env=="square" or type_env=="saw":
             event=np.zeros(int(self.sr/freq))
             if type_env=="square":                
@@ -42,7 +47,7 @@ class Audio_Synthesis():
             
             env = np.tile(event, (int(np.ceil(self.dur_samples/event.size)),))
             env = env[:self.dur_samples]
-            env = np.interp(env, (0,1), (ampl_min, ampl_max))
+            env = map_(env, (0,1), (ampl_min, ampl_max))
 
         elif type_env=="onset":
             event=np.sin(np.linspace(0, np.pi, int(dur_onset*self.sr)))
