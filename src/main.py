@@ -78,8 +78,8 @@ if __name__=="__main__":
     IA=Image_to_Audio(fn="../images/beach.jpg", name="beach")
     IA.convert()
     if IA.fn=="../images/beach.jpg":
-        fn_out=os.path.join("../audio_test/test0beach.wav")
+        fn_out=os.path.join("../audio_samples/beach.wav")
     if IA.fn=="../images/milan.jpg":
-        fn_out=os.path.join("../audio_test/test0milan.wav")
+        fn_out=os.path.join("../audio_samples/milan.wav")
     IA.write(fn_out)
     IA.show()
